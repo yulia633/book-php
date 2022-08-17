@@ -1,0 +1,5 @@
+/vendor/
+/build/
+test.adoc
+.pdf
+profile.code-profile
