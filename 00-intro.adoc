@@ -1,0 +1,31 @@
+= Вступление
+
+
+Если вы новичок в PHP, этот учебник не для вас. Данное руководство предназначено для людей, которые постигли основы PHP и уже знакомы с OОП.
+
+Также, вы должны быть знакомы с принципами https://ru.wikipedia.org/wiki/SOLID[SOLID]. Перед тем, как приступить к учебному пособию, рекомендую  ознакомиться с ними.
+
+Я видел, как много людей заходили в чат Stack Overflow PHP и спрашивали, хорош ли framework X для разработки приложения. Но в большинстве случаев, ответ не зависел от фреймворка, им просто нужно было начать разработку на PHP. Но многих такие ответы пугали, так как они не знали с чего им начать.
+
+Итак, моя цель в том, чтобы предоставить простой ресурс, на который можно указать людям. Использование фреймворка, в некоторых случаях избыточно, и написание приложения с нуля с помощью различных сторонних пакетов намного проще, чем кажется.
+
+Этот учебник был написан для PHP 7.0 или более новых версий. Если вы используете более старую версию, пожалуйста, обновите ее перед началом работы. Я рекомендую вам использовать текущую https://php.net/downloads.php[стабильную версию].
+
+
+Давайте сразу начнем с link:01-front-controller.adoc[первой части >>].
+
+
+== *Оглавление*
+
+*  link:01-front-controller.adoc[Front Controller]
+*  link:02-composer.adoc[Composer]
+*  link:03-error-handler.adoc[Error Handler]
+*  link:04-http.adoc[HTTP]
+*  link:05-router.adoc[Router]
+*  link:06-dispatching-to-a-class.adoc[Dispatching to a Class]
+*  link:07-inversion-of-control.adoc[Inversion of Control]
+*  link:08-dependency-injector.adoc[Dependency Injector]
+*  link:09-templating.adoc[Templating]
+*  link:10-dynamic-pages.adoc[Dynamic Pages]
+*  link:11-page-menu.adoc[Page Menu]
+*  link:12-frontend.adoc[Frontend]
