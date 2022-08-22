@@ -19,10 +19,10 @@
 
 *  link:01-front-controller.adoc[Front Controller]
 *  link:02-composer.adoc[Composer]
-*  link:03-error-handler.adoc[Error Handler]
+*  link:03-error-handler.adoc[Error Handler (Обработчик ошибок)]
 *  link:04-http.adoc[HTTP]
-*  link:05-router.adoc[Router]
-*  link:06-dispatching-to-a-class.adoc[Dispatching to a Class]
+*  link:05-router.adoc[Router (Маршрутизатор)]
+*  link:06-dispatching-to-a-class.adoc[Dispatching to a Class (Разделение задач)]
 *  link:07-inversion-of-control.adoc[Inversion of Control]
 *  link:08-dependency-injector.adoc[Dependency Injector]
 *  link:09-templating.adoc[Templating]
