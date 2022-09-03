@@ -1,0 +1,81 @@
+
+= Router (Маршрутизатор)
+:toc:
+
+link:04-http.adoc[<< HTTP].
+
+Маршрутизатор отправляет запросы различным обработчикам в зависимости от заданных правил. Сейчас не имеет значения, какой URL-адрес используется для доступа к приложению, приложение всегда будет возращать один и тот же ответ. Так что давайте исправим это.
+
+В этом уроке я буду использовать https://github.com/nikic/FastRoute[FastRoute]. Но вы можете выбрать другой пакет, который больше подходит вам.
+
+Альтернативные пакеты можно посмотреть по ссылкам: https://github.com/symfony/Routing[symfony/Routing], https://github.com/auraphp/Aura.Router[Aura.Router], https://github.com/fuelphp/routing[fuelphp/routing], https://github.com/chriso/klein.php[Klein].
+
+Вы уже знаете, как устанавливать пакеты `Composer`, поэтому я оставлю это на ваше усмотрение. Просто добавьте блок кода в файл `Bootstrap.php`, который мы писали в прошлом уроке, где добавили сообщение `"Hello World"`.
+
+[source,php]
+----
+$dispatcher = \FastRoute\simpleDispatcher(function (\FastRoute\RouteCollector $r) {
+    $r->addRoute('GET', '/hello-world', function () {
+        echo 'Hello World';
+    });
+    $r->addRoute('GET', '/another-route', function () {
+        echo 'This works too';
+    });
+});
+
+$routeInfo = $dispatcher->dispatch($request->getMethod(), $request->getPath());
+switch ($routeInfo[0]) {
+    case \FastRoute\Dispatcher::NOT_FOUND:
+        $response->setContent('404 - Page not found');
+        $response->setStatusCode(404);
+        break;
+    case \FastRoute\Dispatcher::METHOD_NOT_ALLOWED:
+        $response->setContent('405 - Method not allowed');
+        $response->setStatusCode(405);
+        break;
+    case \FastRoute\Dispatcher::FOUND:
+        $handler = $routeInfo[1];
+        $vars = $routeInfo[2];
+        call_user_func($handler, $vars);
+        break;
+}
+----
+В первой части кода регистрируются доступные маршруты для приложения. Во второй части вызывается диспетчер, код которого будет выполнен в зависимости от условий. Если маршрут был найден, будет выполнен вызываемый обработчик.
+
+Эта настройка будет хорошо работать для небольших приложений, но как только вы начнете добавлять еще маршруты, ваш загрузочный файл быстро разрастется. Итак, давайте перенесем данный код в отдельный файл.
+
+Создайте файл `Routes.php` в директории `src/` и вставьте следующий код.
+
+[source,php]
+----
+<?php declare(strict_types = 1);
+
+return [
+    ['GET', '/hello-world', function () {
+        echo 'Hello World';
+    }],
+    ['GET', '/another-route', function () {
+        echo 'This works too';
+    }],
+];
+----
+
+Теперь давайте перепишем код создания маршрутов.
+
+[source,php]
+----
+$routeDefinitionCallback = function (\FastRoute\RouteCollector $r) {
+    $routes = include('Routes.php');
+    foreach ($routes as $route) {
+        $r->addRoute($route[0], $route[1], $route[2]);
+    }
+};
+
+$dispatcher = \FastRoute\simpleDispatcher($routeDefinitionCallback);
+----
+
+Мы улучшили код, но теперь обработчики запросов находятся в `Routes.php`. Это не оптимально, поэтому давайте исправим это в следующем уроке.
+
+Не забывайте фиксировать свои изменения в конце каждой главы.
+
+link:06-dispatching-to-a-class.adoc[Dispatching to a Class (Разделение задач) >>].
