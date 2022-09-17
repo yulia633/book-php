@@ -24,7 +24,7 @@
 *  link:05-router.adoc[Router (Маршрутизатор)]
 *  link:06-dispatching-to-a-class.adoc[Dispatching to a Class (Разделение задач)]
 *  link:07-inversion-of-control.adoc[Inversion of Control (Инверсия управления)]
-*  link:08-dependency-injector.adoc[Dependency Injector (Инъектор зависимостей)]
+*  link:08-dependency-injector.adoc[Dependency Injector (Внедрение зависимостей)]
 *  link:09-templating.adoc[Templating (Шаблонизация)]
 *  link:10-dynamic-pages.adoc[Dynamic Pages]
 *  link:11-page-menu.adoc[Page Menu]
