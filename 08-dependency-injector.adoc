@@ -1,0 +1,108 @@
+
+= Dependency Injector (Внедрение зависимостей)
+:toc:
+
+link:07-inversion-of-control.adoc[<< Inversion of Control (Инверсия управления)].
+
+Внедрение зависимостей (Dependency Injection) разрешает зависимости класса и обеспечивает внедрение правильных объектов при создании нового экземпляра.
+
+Есть только одна библитека, реализующая внедрение зависимостей, которую я могу порекомендовать: https://github.com/rdlowrey/Auryn[Auryn]. К сожалению, все известные мне альтернативы используют http://blog.ploeh.dk/2010/02/03/ServiceLocatorisanAnti-Pattern/[антипаттерн Service Locator].
+
+Установите пакет `Auryn`, а затем создайте новый файл с `Dependencies.php` в папке `src/`. Туда добавьте следующий код:
+
+[source,php]
+----
+<?php declare(strict_types = 1);
+
+$injector = new \Auryn\Injector;
+
+$injector->alias('Http\Request', 'Http\HttpRequest');
+$injector->share('Http\HttpRequest');
+$injector->define('Http\HttpRequest', [
+    ':get' => $_GET,
+    ':post' => $_POST,
+    ':cookies' => $_COOKIE,
+    ':files' => $_FILES,
+    ':server' => $_SERVER,
+]);
+
+$injector->alias('Http\Response', 'Http\HttpResponse');
+$injector->share('Http\HttpResponse');
+
+return $injector;
+----
+
+Перед тем как продолжить, убедитесь, что вы понимаете, что такое `alias`, `share` и `define`. Об этом можно узнать из https://github.com/rdlowrey/Auryn[официальной документации].
+
+
+Вместо того, чтобы передавать один объект несколько раз, вы предоставляете доступ к объекту HTTP, поэтому нет смысла добавлять контент в один объект (запрос `request`), а возвращать другой (ответ `response`). С помощью предоставления доступа, мы работаем с одним и тем же экземпляром.
+
+Алиасы или псевдонимы позволяют указывать интерфейс вместо имени класса. Это упрощает переключение реализации без необходимости возвращаться назад и редактировать все классы, использующие старую реализацию.
+
+Теперь все классы которые принимают реализацию интерфейса `Http\Response` будут получать на вход объект типа `Http\HttpResponse` и, если вы захотите заменить реализацию `Http\Response`, то изменения будут только в одном месте, а не в нескольких.
+
+Исправьте файл `Bootstrap.php`. Вместо создание объектов `request` и `response` с помощью оператора `new`, теперь за нас это будет делать внедренная зависимость (`injector`):
+
+[source,php]
+----
+$injector = include('Dependencies.php');
+
+$request = $injector->make('Http\HttpRequest');
+$response = $injector->make('Http\HttpResponse');
+----
+
+Другая часть, которая должна быть изменена, — это диспетчеризация маршрута. Раньше, в контроллере был следующий код:
+
+[source,php]
+----
+$class = new $className($response);
+$class->$method($vars);
+----
+
+Измените его на следующий:
+
+[source,php]
+----
+$class = $injector->make($className);
+$class->$method($vars);
+----
+
+Теперь все ваши зависимости конструктора контроллера будут автоматически разрешены с помощью Auryn.
+
+Вернитесь к `Homepage` и измените его:
+
+[source,php]
+----
+<?php declare(strict_types = 1);
+
+namespace Example\Controllers;
+
+use Http\Request;
+use Http\Response;
+
+class Homepage
+{
+    private $request;
+    private $response;
+
+    public function __construct(Request $request, Response $response)
+    {
+        $this->request = $request;
+        $this->response = $response;
+    }
+
+    public function show()
+    {
+        $content = '<h1>Hello World</h1>';
+        $content .= 'Hello ' . $this->request->getParameter('name', 'stranger');
+        $this->response->setContent($content);
+    }
+}
+----
+
+Как видите, теперь у класса есть две зависимости. Попробуйте получить доступ к странице с параметром GET, подобным этому `http://localhost:8000/?name=Arthur%20Dent`.
+
+Поздравляю, теперь вы успешно создали основу для приложения. 
+
+
+link:09-templating.adoc[Templating (Шаблонизация)>>].
