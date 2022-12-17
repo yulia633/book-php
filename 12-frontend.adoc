@@ -1,0 +1,191 @@
+
+= Frontend (Внешний интерфейс)
+:toc:
+
+link:11-page-menu.adoc[<< Page menu (Меню страницы)].
+
+Не знаю, как вам, а мне не нравится работать с сайтом, которому уже два десятилетия. Итак, давайте улучшим внешний вид нашего маленького приложения.
+
+Это не учебник по внешнему интерфейсу, поэтому мы просто используем https://purecss.io/[чистый css] и на этом закончим.
+
+Сначала нам нужно изменить шаблон `Layout.html`. Я не хочу тратить ваше время на `HTML` и `CSS`, поэтому просто предоставлю код для копирования и вставки. 
+
+
+[source,html]
+----
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Example</title>
+        <link rel="stylesheet" href="http://yui.yahooapis.com/pure/0.6.0/pure-min.css">
+        <link rel="stylesheet" href="/css/style.css">
+    </head>
+    <body>
+        <div id="layout">
+            <div id="menu">
+                <div class="pure-menu">
+                    <ul class="pure-menu-list">
+                        {% for item in menuItems %}
+                            <li class="pure-menu-item"><a href="{{ item['href'] }}" class="pure-menu-link">{{ item['text'] }}</a></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            <div id="main">
+                <div class="content">
+                    {% block content %}
+                    {% endblock %}
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
+----
+
+Вам также понадобится некоторый пользовательский `CSS`. Это файл, который мы хотим сделать общедоступным. Итак, куда мы его поместим? Именно, в общей папке - `public`.
+
+Но чтобы все было немного организованно, добавьте сначала папку `css`, а потом создай `style.css` со следующим содержанием: 
+
+[source,css]
+----
+body {
+    color: #777;
+}
+
+#layout {
+    position: relative;
+    padding-left: 0;
+}
+
+#layout.active #menu {
+    left: 150px;
+    width: 150px;
+}
+
+#layout.active .menu-link {
+    left: 150px;
+}
+
+.content {
+    margin: 0 auto;
+    padding: 0 2em;
+    max-width: 800px;
+    margin-bottom: 50px;
+    line-height: 1.6em;
+}
+
+.header {
+    margin: 0;
+    color: #333;
+    text-align: center;
+    padding: 2.5em 2em 0;
+    border-bottom: 1px solid #eee;
+}
+
+.header h1 {
+    margin: 0.2em 0;
+    font-size: 3em;
+    font-weight: 300;
+}
+
+.header h2 {
+    font-weight: 300;
+    color: #ccc;
+    padding: 0;
+    margin-top: 0;
+}
+
+#menu {
+    margin-left: -150px;
+    width: 150px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 1000; 
+    background: #191818;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+#menu a {
+    color: #999;
+    border: none;
+    padding: 0.6em 0 0.6em 0.6em;
+}
+
+#menu .pure-menu,
+#menu .pure-menu ul {
+    border: none;
+    background: transparent;
+}
+
+#menu .pure-menu ul,
+#menu .pure-menu .menu-item-divided {
+    border-top: 1px solid #333;
+}
+
+#menu .pure-menu li a:hover,
+#menu .pure-menu li a:focus {
+    background: #333;
+}
+
+#menu .pure-menu-selected,
+#menu .pure-menu-heading {
+    background: #1f8dd6;
+}
+
+#menu .pure-menu-selected a {
+    color: #fff;
+}
+
+#menu .pure-menu-heading {
+    font-size: 110%;
+    color: #fff;
+    margin: 0;
+}
+
+.header,
+.content {
+    padding-left: 2em;
+    padding-right: 2em;
+}
+
+#layout {
+    padding-left: 150px; /* left col width "#menu" */
+    left: 0;
+}
+#menu {
+    left: 150px;
+}
+
+.menu-link {
+    position: fixed;
+    left: 150px;
+    display: none;
+}
+
+#layout.active .menu-link {
+    left: 150px;
+}
+----
+
+Теперь, если вы снова посмотрите на свой сайт, все должно выглядеть немного лучше. Не стесняйтесь улучшать его внешний вид позже. Но давайте продолжим урок сейчас.
+
+Каждый раз, когда вам нужен общедоступный источник или файл, вы можете просто поместить его в `public`. Это понадобится вам для всех видов ресурсов, таких как файлы `javascript`, файлы `css`, изображения и многое другое.
+
+Пока все хорошо, но было бы неплохо, если бы наши посетители могли видеть, на какой странице они находятся.
+
+Конечно, для этого нам нужно более одной страницы в меню. я просто воспользуюсь `page-one.md` который мы создали ранее в этом учебнике. Но не стесняйтесь добавлять еще несколько страниц самостоятельно.
+
+Вернитесь к `ArrayMenuReader` и добавьте новые страницы в массив. Теперь это должно выглядеть примерно так: 
+
+[source,php]
+----
+return [
+    ['href' => '/', 'text' => 'Homepage'],
+    ['href' => '/page-one', 'text' => 'Page One'],
+];
+----
+
