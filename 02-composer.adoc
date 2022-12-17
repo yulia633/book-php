@@ -1,4 +1,4 @@
-= Front Controller
+= Composer
 :toc:
 
 link:01-front-controller.adoc[<< Front controller].
