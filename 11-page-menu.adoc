@@ -1,0 +1,276 @@
+
+= Page menu (Меню страницы)
+:toc:
+
+link:10-dynamic-pages.adoc[<< Dynamic pages (Динамические страницы)].
+
+В прошлой главе мы сделали несколько динамических страниц, ноо никто не может их найти.
+
+Давайте исправим это и создадим меню со ссылками на все наши страницы.
+
+Когда у нас будет меню, мы захотим иметь возможность повторно использовать один и тот же код на нескольких страницах. Мы могли бы создать отдельный файл и включать его каждый раз, но есть другое решение.
+
+Более практично иметь шаблоны, которые могут расширять другие шаблоны, например `layout` (макет). Тогда весь код, связанный с макетом будет в одном файле, и не будет необходимости включать файлы верхнего и нижнего колонтитула в каждый шаблон.
+
+Наша реализация `Mustache` не поддерживает это. Мы могли бы написать код, чтобы обойти это, что потребует времени и может привести к некоторым ошибкам. Или мы могли бы переключиться на библиотеку, которая уже поддерживает это и хорошо протестирована. Например, https://twig.symfony.com/[Twig].
+
+Теперь вы можете удивиться, почему мы сразу не начали с `Twig`. Потому что, это хороший пример, показывающий, почему использование интерфейсов и написание слабосвязанного кода — хорошая идея. Как и в реальном мире, требования внезапно изменились, и теперь наш код должен быстро и безболезнено изменить и адаптироваться к новым правилам.
+
+Вспомним, как мы создали `MustacheRenderer` в главе link:09-templating.adoc[chapter 9]? На этот раз мы создаем `TwigRenderer`, который реализует тот же интерфейс.
+
+Но прежде чем мы начнем, установите последнюю версию `Twig` с помощью `composer`: `composer require "twig/twig:^3.0"`.
+
+Затем создайте `TwigRenderer.php` в директории `src/Template`:
+
+[source,php]
+----
+<?php declare(strict_types = 1);
+
+namespace Example\Template;
+
+use Twig_Environment;
+
+class TwigRenderer implements Renderer
+{
+    private $renderer;
+
+    public function __construct(Twig_Environment $renderer)
+    {
+        $this->renderer = $renderer;
+    }
+
+    public function render($template, $data = []) : string
+    {
+        return $this->renderer->render("$template.html", $data);
+    }
+}
+----
+
+Как видите, при вызове функции рендеринга мы используем `.html`. Это связано с тем, что `Twig` не добавляет окончание файла по умолчанию, и в противном случае пришлось бы указывать его при каждом вызове.
+
+Добавьте следующий код в файл `Dependencies.php`: 
+
+[source,php]
+----
+$injector->delegate('Twig_Environment', function () use ($injector) {
+    $loader = new Twig_Loader_Filesystem(dirname(__DIR__) . '/templates');
+    $twig = new Twig_Environment($loader);
+    return $twig;
+});
+----
+
+Вместо того, чтобы просто определять зависимости, мы используем шаблон https://ru.wikipedia.org/wiki/%D0%A8%D0%B0%D0%B1%D0%BB%D0%BE%D0%BD_%D0%B4%D0%B5%D0%BB%D0%B5%D0%B3%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D1%8F[Delegation], чтобы возложить ответственность за создание класса на функцию. Это пригодится в будущем.
+
+Теперь вы можете переключать псевдоним `Renderer` из `MustacheRenderer` к `TwigRenderer`. Теперь по умолчанию вместо `Mustache` будет использоваться `Twig`.
+
+Если вы посмотрите на сайт в своем браузере, все должно работать как прежде. Теперь давайте вернемся к меню.
+
+Для начала мы просто отправим в шаблон жестко заданный массив. В `Homepage` контроллер измените массив `$data`: 
+
+[source,php]
+----
+$data = [
+    'name' => $this->request->getParameter('name', 'stranger'),
+    'menuItems' => [['href' => '/', 'text' => 'Homepage']],
+];
+----
+
+В верхней части файл `Homepage.html` добавьте код: 
+
+[source,php]
+----
+{% for item in menuItems %}
+    <a href="{{ item.href }}">{{ item.text }}</a><br>
+{% endfor %}
+----
+
+Теперь, если вы обновите домашнюю страницу в браузере, вы должны увидеть ссылку.
+
+Меню работает на главной странице, но мы хотим, чтобы оно было на всех страницах. Мы могли бы скопировать его во все файлы шаблонов, но это было бы плохой идеей. Тогда, если что-то изменится, придется изменять все файлы в приложении.
+
+Поэтому, вместо такого подхода, мы будем использовать макет, который может наследоваться всеми шаблонами.
+
+Создать `Layout.html` в директории `templates`: 
+
+[source,php]
+----
+{% for item in menuItems %}
+    <a href="{{ item['href'] }}">{{ item['text'] }}</a><br>
+{% endfor %}
+<hr>
+{% block content %}
+{% endblock %}
+----
+
+Затем измените `Homepage.html`: 
+
+[source,php]
+----
+{% extends "Layout.html" %}
+{% block content %}
+    <h1>Hello World</h1>
+    Hello {{ name }}
+{% endblock %}
+----
+
+И `Page.html`: 
+
+[source,php]
+----
+{% extends "Layout.html" %}
+{% block content %}
+    {{ content }}
+{% endblock %}
+----
+
+Если вы обновите свою домашнюю страницу сейчас, вы должны увидеть меню. Но если вы перейдете на подстраницу, меню там нет, а линия `<hr>` есть.
+
+Проблема в том, что мы только передаем `menuItems` на главную страницу. Делать это снова и снова для всех страниц было бы немного утомительно и требует много работы, если что-то изменится. Итак, давайте исправим это.
+
+Мы могли бы создать глобальную переменную, которую будут использовать все шаблоны, но такая идея не очень хорошая. В будущем мы добавим различные части сайта, например, административную, и у нас будет совсем другое меню.
+
+Поэтому, применим собственный рендерер для внешнего интерфейса. Сначала мы создаем пустой интерфейс, который расширяет существующий `Renderer` интерфейс. 
+
+[source,php]
+----
+<?php declare(strict_types = 1);
+
+namespace Example\Template;
+
+interface FrontendRenderer extends Renderer {}
+----
+
+Расширяя его, мы говорим, что любой класс, реализующий интерфейс `FrontendRenderer` можно использовать там, где `Renderer` требуется. Но не наоборот, потому что `FrontendRenderer` может иметь больше функциональных возможностей, пока он по-прежнему выполняет интерфейс `Renderer`.
+
+Теперь, необходим класс, реализующий новый интерфейс. 
+
+[source,php]
+----
+<?php declare(strict_types = 1);
+
+namespace Example\Template;
+
+class FrontendTwigRenderer implements FrontendRenderer
+{
+    private $renderer;
+
+    public function __construct(Renderer $renderer)
+    {
+        $this->renderer = $renderer;
+    }
+
+    public function render($template, $data = []) : string
+    {
+        $data = array_merge($data, [
+            'menuItems' => [['href' => '/', 'text' => 'Homepage']],
+        ]);
+        return $this->renderer->render($template, $data);
+    }
+}
+----
+
+Как видите, у нас есть зависимость от `Renderer` в этом классе. Этот класс является оболочкой для нашего `Renderer` и добавляет `menuItems` все `$data`.
+
+Также нужно добавить еще один псевдоним в файл зависимостей. 
+
+[source,php]
+----
+$injector->alias('Example\Template\FrontendRenderer', 'Example\Template\FrontendTwigRenderer');
+----
+
+Теперь перейдите к контроллерам и измените все на Renderer с FrontendRenderer. Убедитесь, что обновили `use` вверху и в конструкторе.
+
+Также удалите следующую строку из `Homepage` контроллера: 
+
+[source,php]
+----
+'menuItems' => [['href' => '/', 'text' => 'Homepage']],
+----
+
+Как только это будет сделано, вы должны увидеть меню как на главной странице, так и на подстраницах.
+
+Теперь все должно работать, но на самом деле не имеет смысла определять меню в `FrontendTwigRenderer`. Итак, давайте немного отрефакторим и переместим меню в отдельный класс.
+
+Прямо сейчас меню определено в массиве, но очень вероятно, что это изменится в будущем. Может быть, вы хотите определить его в базе данных или, может быть, вы даже хотите сгенерировать его динамически на основе доступных страниц. У нас нет этой информации, и в будущем все может измениться.
+
+Итак, давайте поступим правильно и снова начнем с интерфейса. Но сначала создайте новую папку в `src`, связанных с меню. `Menu` звучит как разумное название, не так ли? 
+
+[source,php]
+----
+<?php declare(strict_types = 1);
+
+namespace Example\Menu;
+
+interface MenuReader
+{
+    public function readMenu() : array;
+}
+----
+
+И очень простая реализация будет выглядеть так: 
+
+[source,php]
+----
+<?php declare(strict_types = 1);
+
+namespace Example\Menu;
+
+class ArrayMenuReader implements MenuReader
+{
+    public function readMenu() : array
+    {
+        return [
+            ['href' => '/', 'text' => 'Homepage'],
+        ];
+    }
+}
+----
+
+Это лишь временное решение, чтобы двигаться вперед. Мы вернемся к этому позже.
+
+Прежде чем мы продолжим, давайте отредактируем файл зависимостей, чтобы убедиться, что наше приложение знает, какую реализацию использовать при запросе интерфейса.
+
+Добавьте эти строки над return: 
+
+[source,php]
+----
+$injector->alias('Example\Menu\MenuReader', 'Example\Menu\ArrayMenuReader');
+$injector->share('Example\Menu\ArrayMenuReader');
+----
+
+Теперь вам нужно изменить жестко запрограммированный массив в классе `FrontendTwigRenderer`, чтобы он использовал наш новый `MenuReader`. Попробуйте, не глядя на решение ниже.
+
+Ты закончил или застрял? Или ты просто ленивый? Неважно, вот рабочее решение: 
+
+[source,php]
+----
+<?php declare(strict_types = 1);
+
+namespace Example\Template;
+
+use Example\Menu\MenuReader;
+
+class FrontendTwigRenderer implements FrontendRenderer
+{
+    private $renderer;
+    private $menuReader;
+
+    public function __construct(Renderer $renderer, MenuReader $menuReader)
+    {
+        $this->renderer = $renderer;
+        $this->menuReader = $menuReader;
+    }
+
+    public function render($template, $data = []) : string
+    {
+        $data = array_merge($data, [
+            'menuItems' => $this->menuReader->readMenu(),
+        ]);
+        return $this->renderer->render($template, $data);
+    }
+}
+----
+
+Все еще работает? Отлично! Зафиксируем и перейдем к следующей главе.
+
+link:12-frontend.adoc[Frontend >>].
