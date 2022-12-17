@@ -48,3 +48,8 @@
 $ make pdf
 
 ```
+
+#### Код
+
+Код приложения по расширенной версии книги автора [Professional PHP: Learn how to build maintainable and secure applications
+](http://patricklouys.com/professional-php/): https://github.com/yulia633/noframework
