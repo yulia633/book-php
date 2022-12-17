@@ -1,0 +1,145 @@
+
+= Templating (Шаблонизация)
+:toc:
+
+link:08-dependency-injector.adoc[<< Dependency Injector (Внедрение зависимостей)].
+
+Механизм шаблонизации PHP не нужен, так как он уже встроен в сам язык. Но сторонний механизм шаблонизации мог бы упростить нам жизнь. Шаблонизация проводит четкую линию между логикой приложения и шаблонами HTML-кода.
+
+Про шаблонизацию можно прочитать тут http://blog.ircmaxell.com/2012/12/on-templating.html[ircmaxell on templating]. Есть и другие мнения по этому вопросу. Лично у меня нет твердого мнения по этой теме, поэтому решайте сами, какой подход вам больше импонирует.
+
+В этом уроке мы будем использовать реализацию https://github.com/bobthecow/mustache.php[Mustache].
+
+Поэтому установите этот пакет, прежде чем продолжить: `composer require mustache/mustache`.
+
+Другой известной альтернативой может быть https://twig.symfony.com/[Twig].
+
+Теперь, пожалуйста, посмотрите на https://github.com/bobthecow/mustache.php/blob/main/src/Mustache/Engine.php[исходный код класса движка]. Как вы видите, данный класс не реализвует какой-либо интерфейс.
+
+Мы конечно можем при внедрении шаблонизатора привязаться к конкретному классу, но минус данного подхода в том, что в таком случае мы будем тесно связаны с реализацией, а не с абстракцией. 
+
+Другими словами, весь код, который использует шаблонизатор, будет зависеть от пакета Mustache. И, если вы захотите изменить реализацию, просто так это сделать не выйдет. Возможно, в будущем вы захотите переключится на Twig, или захотите использовать свой собственный шаблонизатор. Из-за тесной связи с реализацией придется править много кода в разных частях приложения.
+
+Конечно, хотелось бы не зависеть от реализации и в нашем случае это поправимо. Но вместо редактирования кода стороннего пакета предлагаю использовать адаптер http://en.wikipedia.org/wiki/Adapter_pattern[адаптер]. 
+Звучит непонятно и сложно, но с ниже мы это разберем.
+
+Для начала определим нужный нам интерфейс. Не забываем о принципе разделения интерфейсов https://ru.wikipedia.org/wiki/%D0%9F%D1%80%D0%B8%D0%BD%D1%86%D0%B8%D0%BF_%D1%80%D0%B0%D0%B7%D0%B4%D0%B5%D0%BB%D0%B5%D0%BD%D0%B8%D1%8F_%D0%B8%D0%BD%D1%82%D0%B5%D1%80%D1%84%D0%B5%D0%B9%D1%81%D0%B0[принципе разделения интерфейсов],который гласит, что слишком «толстые» интерфейсы необходимо разделять на более маленькие и специфические, чтобы программные сущности маленьких интерфейсов знали только о методах, которые необходимы им в работе.
+
+Определим, что должен делать наш шаблонизатор? Сейчас нам нужен только метод рендеринга. Давайте создадим папку `Template` в директории `src/`, где будем хранить все файлы связанные с шаблонизацией. В папке `Template`` создадим файл `Renderer.php`, который должен выглядеть следующим образом:
+
+[source,php]
+----
+<?php declare(strict_types = 1);
+
+namespace Example\Template;
+
+interface Renderer
+{
+    public function render($template, $data = []) : string;
+}
+----
+
+Интерфейс готов, теперь давайте создадим класс для `Mustache`. В этой же папке создаем файл `MustacheRenderer.php`:
+
+[source,php]
+----
+<?php declare(strict_types = 1);
+
+namespace Example\Template;
+
+use Mustache_Engine;
+
+class MustacheRenderer implements Renderer
+{
+    private $engine;
+
+    public function __construct(Mustache_Engine $engine)
+    {
+        $this->engine = $engine;
+    }
+
+    public function render($template, $data = []) : string
+    {
+        return $this->engine->render($template, $data);
+    }
+}
+----
+
+Как видите, адаптер получился очень простой. Теперь нужно добавить алиас в `Dependencies.php`, так как инъектор пока ничего на знает о созданном ранее интерфейсе. Добавим строку:
+
+[source,php]
+----
+$injector->alias('Example\Template\Renderer', 'Example\Template\MustacheRenderer');
+----
+
+Теперь можем добавить еще один аргумент к контроллеру `Homepage`:
+
+[source,php]
+----
+<?php declare(strict_types = 1);
+
+namespace Example\Controllers;
+
+use Http\Request;
+use Http\Response;
+use Example\Template\Renderer;
+
+class Homepage
+{
+    private $request;
+    private $response;
+    private $renderer;
+
+    public function __construct(
+        Request $request, 
+        Response $response,
+        Renderer $renderer
+    ) {
+        $this->request = $request;
+        $this->response = $response;
+        $this->renderer = $renderer;
+    }
+
+...
+----
+
+Давайте перепишем метод `show`. Обратите внимание, что сейчас шаблонизатор принимает массив. Это сделано для простоты примера. `Mustache` предоставляет возможность передавать объект контекста представления. Но к более сложным вещам мы перейдем немного позже:
+
+[source,php]
+----
+ public function show()
+    {
+        $data = [
+            'name' => $this->request->getParameter('name', 'stranger'),
+        ];
+        $html = $this->renderer->render('Hello {{name}}', $data);
+        $this->response->setContent($html);
+    }
+----
+
+По умолчанию `Mustache` принимает на вход обычную строку. Но нам хотелось бы использовать файлы шаблонов вместо строк. Все что нам нужно, это передать конструктору `Mustache_Engine` нужные параметры. Давайте перейдем в `Dependencies.php` и определим правила создания объекта `Mustache_Engine`:
+
+[source,php]
+----
+$injector->define('Mustache_Engine', [
+    ':options' => [
+        'loader' => new Mustache_Loader_FilesystemLoader(dirname(__DIR__) . '/templates', [
+            'extension' => '.html',
+        ]),
+    ],
+]);
+----
+
+Мы передаем массив с параметрами, потому что хотели бы использовать расширение `.html` вместо изначального `.mustache`. Зачем? Затем, что другие шаблонизаторы используют подобный синтаксис, и если мы все же захотим изменить шаблонизатор, нам не придется переименовывать все файлы шаблонов.
+
+В корневой директории проекта создадим папку `templates`. Создадим файл `Homepage.html` и вставим в него код:
+
+[source,php]
+----
+<h1>Hello World</h1>
+Hello {{ name }}
+----
+
+Теперь мы можем вернутся к контроллеру `Homepage` и изменить строку где вызывается метод рендеринга на `$html = $this->renderer->render('Homepage', $data);`. Откроем главную страницу сайта в браузере и убедимся, что все работает корректно.
+
+link:10-dynamic-pages.adoc[Dynamic pages (Динамические страницы)>>].
